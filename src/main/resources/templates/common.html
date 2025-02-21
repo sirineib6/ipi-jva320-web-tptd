@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:replace="${title}">Commun - Thymeleaf</title>
+</head>
+<body>
+<!-- Fragment commun paramétré -->
+<div th:fragment="commonHead(title)">
+  <nav>
+    <ul>
+      <li><a href="/">Accueil</a></li>
+      <li><a href="/salaries">Liste des salariés</a></li>
+      <li><a href="/salaries/aide/new">Créer un salarié</a></li>
+    </ul>
+  </nav>
+  <h1 th:text="${title}"></h1> <!-- Affiche le titre de la page -->
+</div>
+</body>
+</html>

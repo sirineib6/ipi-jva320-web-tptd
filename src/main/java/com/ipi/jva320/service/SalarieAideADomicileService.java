@@ -7,30 +7,26 @@ import com.ipi.jva320.repository.SalarieAideADomicileRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityExistsException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-/**
- * Permet de gérer les salariés aide à domicile, et notamment :
- * en créer, leur ajouter des congés (ajouteConge()), et les mettre à jour à la clôture de mois et d'année.
- */
 @Service
 public class SalarieAideADomicileService {
 
     @Autowired
     private SalarieAideADomicileRepository salarieAideADomicileRepository;
 
-    public SalarieAideADomicileService() {
+    public SalarieAideADomicileService() throws SalarieException {
     }
 
     /**
@@ -92,7 +88,7 @@ public class SalarieAideADomicileService {
         if (!existantOptional.isEmpty()) {
             throw new SalarieException("Un salarié existe déjà avec l'id " + existant.getId()); // TODO id ou nom ??
         }*/
-       return salarieAideADomicileRepository.save(salarieAideADomicile);
+        return salarieAideADomicileRepository.save(salarieAideADomicile);
     }
 
     public SalarieAideADomicile updateSalarieAideADomicile(SalarieAideADomicile salarieAideADomicile)
@@ -119,38 +115,17 @@ public class SalarieAideADomicileService {
         salarieAideADomicileRepository.deleteById(id);
     }
 
-    /**
-     * Calcule la limite maximale de congés prenable autorisée selon les règles de l'entreprise, à savoir :
-     * - de base, les congés acquis en année N-1 dans la proportion selon l'avancement dans l'année
-     * (l'objectif est d'obliger les salariés à lisser leurs congés sur l'année, mais quand même leur permettre de
-     * prendre davantage de congés pendant les vacances d'été)
-     * pondéré avec poids plus gros sur juillet et août (20 vs 8),
-     * - si la moyenne actuelle des congés pris diffère de 20% de la précédente limite,
-     * bonus ou malus de 20% de la différence pour aider à équilibrer la moyenne actuelle des congés pris
-     * - marge supplémentaire de 10% du nombre de mois jusqu'à celui du dernier jour de congé
-     * - bonus de 1 par année d'ancienneté jusqu'à 10
-     * Utilisé par ajouteMois(). NB. ajouteMois() a déjà vérifié que le congé est dans l'année en cours.
-     * @param moisEnCours du salarieAideADomicile
-     * @param congesPayesAcquisAnneeNMoins1 du salarieAideADomicile
-     * @parma moisDebutContrat du salarieAideADomicile
-     * @param premierJourDeConge demandé
-     * @param dernierJourDeConge demandé
-     * @return arrondi à l'entier le plus proche
-     */
+
     public long calculeLimiteEntrepriseCongesPermis(LocalDate moisEnCours, double congesPayesAcquisAnneeNMoins1,
-                                                      LocalDate moisDebutContrat,
-                                                      LocalDate premierJourDeConge, LocalDate dernierJourDeConge) {
+                                                    LocalDate moisDebutContrat,
+                                                    LocalDate premierJourDeConge, LocalDate dernierJourDeConge) {
         // proportion selon l'avancement dans l'année, pondérée avec poids plus gros sur juillet et août (20 vs 8) :
         double proportionPondereeDuConge = Math.max(Entreprise.proportionPondereeDuMois(premierJourDeConge),
                 Entreprise.proportionPondereeDuMois(dernierJourDeConge));
         double limiteConges = proportionPondereeDuConge * congesPayesAcquisAnneeNMoins1;
 
-        // moyenne annuelle des congés pris :
         Double partCongesPrisTotauxAnneeNMoins1 = salarieAideADomicileRepository.partCongesPrisTotauxAnneeNMoins1();
 
-        // si la moyenne actuelle des congés pris diffère de 20% de la la proportion selon l'avancement dans l'année
-        // pondérée avec poids plus gros sur juillet et août (20 vs 8),
-        // bonus ou malus de 20% de la différence pour aider à équilibrer la moyenne actuelle des congés pris :
         double proportionMoisEnCours = ((premierJourDeConge.getMonthValue()
                 - Entreprise.getPremierJourAnneeDeConges(moisEnCours).getMonthValue()) % 12) / 12d;
         double proportionTotauxEnRetardSurLAnnee = proportionMoisEnCours - partCongesPrisTotauxAnneeNMoins1;
@@ -233,16 +208,7 @@ public class SalarieAideADomicileService {
         salarieAideADomicileRepository.save(salarieAideADomicile);
     }
 
-    /**
-     * Clôture le mois en cours du salarie donné (et fait les calculs requis pour sa feuille de paie de ce mois) :
-     * (pas forcément en cours, par exemple en cas de retard, vacances de l'entreprise)
-     * Met à jour les jours travaillés (avec ceux donnés) et congés payés acquis (avec le nombre acquis par mois, qu'on suppose constant de 2.5) de l'année N
-     * (le décompte d ceux de l'année N-1 a par contre déjà été fait dans ajouteConge()).
-     * On déduit un jour de congé entier pour chaque absence. Par exemple lors des vacances, pour savoir combien de jours de congés payés sont consommés, même si ladite absence dure seulement une demi-journée.
-     * Si dernier mois de l'année, clôture aussi l'année
-     * @param salarieAideADomicile salarié
-     * @param joursTravailles jours travaillés dans le mois en cours du salarié
-     */
+
     public void clotureMois(SalarieAideADomicile salarieAideADomicile, double joursTravailles) throws SalarieException {
         // incrémente les jours travaillés de l'année N du salarié de celles passées en paramètres
         salarieAideADomicile.setJoursTravaillesAnneeN(salarieAideADomicile.getJoursTravaillesAnneeN() + joursTravailles);
@@ -259,11 +225,7 @@ public class SalarieAideADomicileService {
         salarieAideADomicileRepository.save(salarieAideADomicile);
     }
 
-    /**
-     * Clôture l'année donnée. Il s'agit d'une année DE CONGES donc du 1er juin au 31 mai.
-     * Passe les variables N à N-1
-     * @param salarieAideADomicile
-     */
+
     void clotureAnnee(SalarieAideADomicile salarieAideADomicile) {
         salarieAideADomicile.setJoursTravaillesAnneeNMoins1(salarieAideADomicile.getJoursTravaillesAnneeN());
         salarieAideADomicile.setCongesPayesAcquisAnneeNMoins1(salarieAideADomicile.getCongesPayesAcquisAnneeN());
@@ -280,4 +242,43 @@ public class SalarieAideADomicileService {
         salarieAideADomicileRepository.save(salarieAideADomicile);
     }
 
+    public SalarieAideADomicile updateSalarie(SalarieAideADomicile salarieAideADomicile) throws SalarieException {
+        if (salarieAideADomicile.getId() == null) {
+            throw new SalarieException("L'id doit être fourni");
+        }
+        Optional<SalarieAideADomicile> existant = salarieAideADomicileRepository.findById(salarieAideADomicile.getId());
+        if (existant.isEmpty()) {
+            throw new SalarieException("Le salarié n'existe pas");
+        }
+        return salarieAideADomicileRepository.save(salarieAideADomicile);
+    }
+
+    public void deleteSalarie(Long id) throws SalarieException {
+        Optional<SalarieAideADomicile> existant = salarieAideADomicileRepository.findById(id);
+        if (existant.isEmpty()) {
+            throw new SalarieException("Le salarié avec l'id " + id + " n'existe pas");
+        }
+        salarieAideADomicileRepository.deleteById(id);
+    }
+    public Optional<SalarieAideADomicile> getOptionalSalarie(Long id) {
+        return salarieAideADomicileRepository.findById(id);
+    }
+
+
+    public SalarieAideADomicile findSalarieById(Long id) throws SalarieException {
+        Optional<SalarieAideADomicile> optionalSalarie = salarieAideADomicileRepository.findById(id);
+        return optionalSalarie.orElseThrow(() -> new SalarieException("Salarie non trouvé"));
+    }
+
+    public List<SalarieAideADomicile> findByNom(String nom) {
+        return salarieAideADomicileRepository.findByNomContainingIgnoreCase(nom); // Supposant que la méthode existe dans le repository
+    }
+
+    public interface SalarieRepository extends JpaRepository<SalarieAideADomicile, Long> {
+        List<SalarieAideADomicile> findByNomContainingIgnoreCase(String nom);
+    }
+
 }
+
+
+

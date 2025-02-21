@@ -6,4 +6,8 @@ public class SalarieException extends Exception {
         super(s);
     }
 
+    public SalarieException(String s, Exception e) {
+        super(s, e);
+    }
+
 }

@@ -72,6 +72,16 @@
               <a class="page-link" href="/salaries?page=1&amp;size=10&amp;sortProperty=nom&amp;sortDirection=ASC">»</a></li>
           </ul></div>
       </div>
+      <!-- Affiche un message de succès s'il existe -->
+      <div th:if="${message}" class="alert alert-success" role="alert">
+        <span th:text="${message}"></span>
+      </div>
+
+      <!-- Affiche un message d'erreur s'il existe -->
+      <div th:if="${error}" class="alert alert-danger" role="alert">
+        <span th:text="${error}"></span>
+      </div>
+
     </div>
   </div>
 </div>

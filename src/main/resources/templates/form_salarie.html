@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:insert="common :: commonHead('Formulaire de salarié')"></head>
+<body>
+<div class="container">
+    <h2>Créer un nouveau salarié</h2>
+
+    <form action="/salaries/save" method="post" th:object="${salarie}">
+        <label>Nom :</label>
+        <input type="text" th:field="*{nom}" class="form-control" required>
+
+        <label>Date d'embauche :</label>
+        <input type="date" th:field="*{moisDebutContrat}" class="form-control" required>
+
+        <label>Mois en cours :</label>
+        <input type="date" th:field="*{moisEnCours}" class="form-control" required>
+
+        <label>Jours travaillés année N :</label>
+        <input type="number" th:field="*{joursTravaillesAnneeN}" class="form-control" required>
+
+        <label>Congés payés acquis année N :</label>
+        <input type="number" th:field="*{congesPayesAcquisAnneeN}" class="form-control" required>
+
+        <br>
+        <button type="submit" class="btn btn-primary">Créer</button>
+        <a href="/salaries" class="btn btn-secondary">Annuler</a>
+    </form>
+</div>
+</body>
+</html>

@@ -1,11 +1,8 @@
 <!DOCTYPE html>
+
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    
-    <title>Gestion des salariés</title>
-    <link rel="stylesheet" href="/static/bootstrap.min.css">
-    <link rel="stylesheet" href="./static/font-awesome.css">
-</head>
+<head th:insert="common :: commonHead('Détail du salarié')"></head>
+
 <body>
 
 <div>
@@ -34,25 +31,28 @@
     <div th:text="#{msg.salarie}"></div><!-- TODO better messages example -->
 
     <h2>Détail du salarié</h2>
-    
+
     <form id="saveForm" action="http://localhost:8080/salaries/aide/10" method="post" class="row">
 
         <div class="col-lg-6">
             <div class="form-group">
                 <label class="form-control-label" for="id">ID</label>
-                <input type="text" value="10" class="form-control" name="id" id="id" disabled="true">
+                <input type="text" th:value="${salarie.id}" class="form-control" name="id" id="id" disabled="true">
 
                 <label class="form-control-label" for="nom">Nom</label>
-                <input type="text" value="Jean Dupont" class="form-control" name="nom" id="nom">
+                <input type="text" th:value="${salarie.nom}" class="form-control" name="nom" id="nom">
 
                 <label class="form-control-label" for="nom">moisEnCours</label>
-                <input type="date" value="03/2023" class="form-control" name="moisEnCours"
-                       id="moisEnCours">
+                <input type="date" th:value="${salarie.moisEnCours}" class="form-control" name="moisEnCours" id="moisEnCours">
+
 
                 <label class="form-control-label" for="nom">moisDebutContrat</label>
-                <input type="date" value="08/2022" class="form-control" name="moisDebutContrat" id="moisDebutContrat">
+                <input type="date" th:value="${salarie.moisDebutContrat}" class="form-control" name="moisDebutContrat" id="moisDebutContrat">
             </div>
         </div>
+
+
+
 
         <div class="col-lg-6">
             <div class="form-group">
@@ -78,7 +78,7 @@
             </div>
             </div>
         </div>
-        
+
 
         <div class="col-lg-6">
             <div>
@@ -112,9 +112,9 @@
             </div>
         </div>
 
-        
+
     </form>
-    
+
     <div class="row">
         <div class="col-lg-6">
             <ul class="list-group list-unstyled">
@@ -126,6 +126,8 @@
         <div class="col-lg-6">
             <input form="saveForm" class="btn btn-primary" type="submit" value="Enregistrer">
             <a href="/salaries/10/delete" class="btn btn-danger">Supprimer</a>
+            <a th:href="@{/salaries/{id}/delete(id=${salarie.id})}" class="btn btn-danger">Supprimer</a>
+
         </div>
     </div>
 
